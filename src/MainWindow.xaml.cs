@@ -23,6 +23,7 @@ public partial class MainWindow : Window
         _view = CollectionViewSource.GetDefaultView(store.Items);
         _view.Filter = o => string.IsNullOrWhiteSpace(SearchBox.Text) || ((ClipItem)o).Matches(SearchBox.Text.Trim());
         List.ItemsSource = _view;
+        store.Items.CollectionChanged += (_, _) => UpdateNumbers();
     }
 
     /// <summary>Shows the popup near the bottom of the screen and focuses the search box.</summary>
@@ -35,6 +36,7 @@ public partial class MainWindow : Window
         Left = area.Left + (area.Width - Width) / 2;
         Top = area.Bottom - Height - 8;
 
+        UpdateNumbers();
         Show();
         Activate();
         SearchBox.Focus();
@@ -49,13 +51,11 @@ public partial class MainWindow : Window
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
-        // 1..9, 0 select the 1st..10th item; once a search is being typed, digits go to the search box.
-        if (SearchBox.Text.Length == 0 && Keyboard.Modifiers == ModifierKeys.None &&
-            DigitIndex(e.Key) is int n && n < List.Items.Count)
+        // Ctrl+1..9, Ctrl+0 paste the 1st..10th item immediately.
+        if (Keyboard.Modifiers == ModifierKeys.Control && DigitIndex(e.Key) is int n)
         {
-            List.SelectedIndex = n;
-            List.ScrollIntoView(List.SelectedItem);
             e.Handled = true;
+            if (n < List.Items.Count && List.Items[n] is ClipItem quick) _ = PasteAsync(quick);
             return;
         }
 
@@ -84,6 +84,14 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Labels the first ten visible items 1..9,0 to match the Ctrl+digit shortcuts.</summary>
+    private void UpdateNumbers()
+    {
+        var i = 0;
+        foreach (ClipItem item in _view)
+            item.Number = i < 10 ? ((i++ + 1) % 10).ToString() : "";
+    }
+
     private static int? DigitIndex(Key key) => key switch
     {
         >= Key.D1 and <= Key.D9 => key - Key.D1,
@@ -104,6 +112,7 @@ public partial class MainWindow : Window
     private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         _view.Refresh();
+        UpdateNumbers();
         if (List.Items.Count > 0) List.SelectedIndex = 0;
     }
 
@@ -176,14 +185,4 @@ public partial class MainWindow : Window
             if (d is T t) return t;
         return null;
     }
-}
-
-/// <summary>Maps a list position to its hotkey label: 0..8 → "1".."9", 9 → "0", beyond → blank.</summary>
-public sealed class HotkeyNumberConverter : System.Windows.Data.IValueConverter
-{
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
-        value is int i && i is >= 0 and < 10 ? ((i + 1) % 10).ToString() : "";
-
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
-        throw new NotSupportedException();
 }

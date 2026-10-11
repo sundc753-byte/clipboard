@@ -48,6 +48,21 @@ public sealed class ClipItem : INotifyPropertyChanged
         }
     }
 
+    private string _number = "";
+
+    /// <summary>Hotkey label shown beside the item ("1".."9","0", or blank); set by the window.</summary>
+    [JsonIgnore]
+    public string Number
+    {
+        get => _number;
+        set
+        {
+            if (_number == value) return;
+            _number = value;
+            Raise(nameof(Number));
+        }
+    }
+
     private BitmapImage? _thumb;
 
     [JsonIgnore]
