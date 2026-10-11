@@ -49,6 +49,16 @@ public partial class MainWindow : Window
 
     private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        // 1..9, 0 select the 1st..10th item; once a search is being typed, digits go to the search box.
+        if (SearchBox.Text.Length == 0 && Keyboard.Modifiers == ModifierKeys.None &&
+            DigitIndex(e.Key) is int n && n < List.Items.Count)
+        {
+            List.SelectedIndex = n;
+            List.ScrollIntoView(List.SelectedItem);
+            e.Handled = true;
+            return;
+        }
+
         switch (e.Key)
         {
             case Key.Escape:
@@ -73,6 +83,15 @@ public partial class MainWindow : Window
                 break;
         }
     }
+
+    private static int? DigitIndex(Key key) => key switch
+    {
+        >= Key.D1 and <= Key.D9 => key - Key.D1,
+        Key.D0 => 9,
+        >= Key.NumPad1 and <= Key.NumPad9 => key - Key.NumPad1,
+        Key.NumPad0 => 9,
+        _ => null,
+    };
 
     private void MoveSelection(int delta)
     {
@@ -157,4 +176,14 @@ public partial class MainWindow : Window
             if (d is T t) return t;
         return null;
     }
+}
+
+/// <summary>Maps a list position to its hotkey label: 0..8 → "1".."9", 9 → "0", beyond → blank.</summary>
+public sealed class HotkeyNumberConverter : System.Windows.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+        value is int i && i is >= 0 and < 10 ? ((i + 1) % 10).ToString() : "";
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
 }
