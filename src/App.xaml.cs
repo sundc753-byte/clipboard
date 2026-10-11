@@ -57,6 +57,15 @@ public partial class App : System.Windows.Application
         BuildTray();
     }
 
+    private static string VersionText
+    {
+        get
+        {
+            var v = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            return v is null ? "" : $"v{v.Major}.{v.Minor}.{v.Build}";
+        }
+    }
+
     private void BuildTray()
     {
         var menu = new System.Windows.Forms.ContextMenuStrip();
@@ -72,12 +81,13 @@ public partial class App : System.Windows.Application
         menu.Items.Add(auto);
 
         menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        menu.Items.Add(new System.Windows.Forms.ToolStripMenuItem($"버전 {VersionText}") { Enabled = false });
         menu.Items.Add("종료", null, (_, _) => Shutdown());
 
         _tray = new System.Windows.Forms.NotifyIcon
         {
             Icon = CreateIcon(),
-            Text = "클립보드 (Win+V)",
+            Text = $"클립보드 (Win+V) {VersionText}",
             ContextMenuStrip = menu,
             Visible = true,
         };
